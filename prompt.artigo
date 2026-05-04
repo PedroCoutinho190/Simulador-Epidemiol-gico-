@@ -1,0 +1,27 @@
+Você é um especialista em epidemiologia computacional e redação acadêmica. Escreva um artigo científico em português explicando o código de simulação epidêmica apresentado abaixo. O artigo deve seguir a estrutura acadêmica padrão e ser adequado para submissão a um periódico de epidemiologia computacional ou informática em saúde pública.
+CÓDIGO A EXPLICAR:
+[COLE AQUI O CÓDIGO GERADO PELA IA NA PARTE 1]
+REQUISITOS DO ARTIGO:
+Estrutura:
+
+Título (informativo e acadêmico)
+Resumo (150–200 palavras): contexto, objetivo, métodos, resultados, conclusão
+
+
+Introdução: contexto da modelagem epidêmica, histórico dos modelos SIR (Kermack & McKendrick, 1927), motivação
+Modelo Matemático: descrição formal das equações diferenciais, definição dos parâmetros com unidades e faixas típicas, hipóteses e limitações
+Implementação: descrição do método numérico utilizado (Runge-Kutta RK4), arquitetura do software, principais funções e seus papéis
+Resultados: descrição do que a simulação produz, interpretação das curvas, explicação das métricas (R₀, limiar de imunidade de rebanho, pico de infecção)
+Discussão: valor educacional da ferramenta, comparação com surtos reais (COVID-19, sarampo), limitações e melhorias futuras
+
+Conclusão
+
+
+Referências: pelo menos 8 referências acadêmicas reais e citáveis no formato ABNT, incluindo o artigo original de Kermack-McKendrick
+
+Diretrizes de estilo:
+
+Português formal acadêmico, terceira pessoa, voz passiva quando apropriado
+Sem listas com marcadores dentro do corpo do artigo — use prosa contínua
+Defina todos os símbolos matemáticos na primeira ocorrência
+Extensão mínima: 1.500 palavras
