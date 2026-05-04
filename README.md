@@ -6,8 +6,7 @@ Aplicação web interativa para simulação da propagação de doenças infectoc
 
 ## 🔗 Demo ao vivo
 
-> Após ativar o GitHub Pages, cole o link aqui:  
-> `https://SEU_USUARIO.github.io/NOME_DO_REPOSITORIO`
+"https://github.com/PedroCoutinho190/Simulador-Epidemiol-gico-.git"
 
 ---
 
