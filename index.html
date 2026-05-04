@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador Epidemiológico SEIR</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #484f58;
+    --blue: #58a6ff;
+    --blue-dim: #1f3a5f;
+    --red: #f85149;
+    --red-dim: #3d1f1e;
+    --green: #3fb950;
+    --green-dim: #1a3a22;
+    --amber: #d29922;
+    --amber-dim: #3d2f0a;
+    --purple: #bc8cff;
+    --purple-dim: #2d1f4a;
+    --accent: #58a6ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+  header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.4rem;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  header .subtitle {
+    font-size: 12px;
+    color: var(--text2);
+    font-weight: 300;
+  }
+  .badge-model {
+    margin-left: auto;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    background: var(--purple-dim);
+    color: var(--purple);
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid #4a2f7a;
+  }
+
+  /* ── LAYOUT ── */
+  .app {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    min-height: calc(100vh - 65px);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .section-title {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    margin-bottom: 0.75rem;
+  }
+
+  /* ── PRESETS ── */
+  .presets-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .preset-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 8px;
+    cursor: pointer;
+    color: var(--text);
+    text-align: left;
+    transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--accent); background: #1c2333; }
+  .preset-btn.active { border-color: var(--accent); background: var(--blue-dim); }
+  .preset-btn .pname { font-size: 12px; font-weight: 500; display: block; }
+  .preset-btn .pr0 { font-size: 11px; color: var(--text2); font-family: 'DM Mono', monospace; }
+
+  /* ── PARAM GROUP ── */
+  .param-group {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .param-row label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .param-row .lname {
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .param-row .lval {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    background: var(--blue-dim);
+    padding: 2px 8px;
+    border-radius: 4px;
+    min-width: 60px;
+    text-align: right;
+  }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--bg3);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  /* toggle SEIR/SIR */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .toggle {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--bg3);
+    border-radius: 10px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    transition: 0.2s;
+  }
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    left: 2px;
+    top: 2px;
+    background: var(--text2);
+    border-radius: 50%;
+    transition: 0.2s;
+  }
+  .toggle input:checked + .toggle-slider { background: var(--blue-dim); border-color: var(--accent); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(16px); background: var(--accent); }
+
+  /* ── ACTIONS ── */
+  .actions { display: flex; gap: 8px; }
+  .btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #0d1117;
+    border-color: var(--accent);
+  }
+  .btn-primary:hover { background: #79b8ff; }
+  .btn-secondary { background: var(--bg3); color: var(--text2); }
+  .btn-secondary:hover { color: var(--text); border-color: var(--text2); }
+
+  /* ── MAIN ── */
+  .main {
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    gap: 1.5rem;
+    overflow: auto;
+  }
+
+  /* ── METRICS ── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .metric-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+  }
+  .metric-card .mlabel {
+    font-size: 11px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .metric-card .mval {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.6rem;
+    line-height: 1;
+  }
+  .metric-card .msub {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 4px;
+  }
+  .mval.blue { color: var(--blue); }
+  .mval.red { color: var(--red); }
+  .mval.green { color: var(--green); }
+  .mval.amber { color: var(--amber); }
+
+  /* ── CHART ── */
+  .chart-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    flex: 1;
+  }
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  .chart-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .legend {
+    display: flex;
+    gap: 1rem;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--text2);
+  }
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  canvas { display: block; }
+
+  /* ── EQUATIONS ── */
+  .equations-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+  }
+  .equations-card .eq-title {
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 0.75rem;
+    font-weight: 500;
+  }
+  .eq-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  .eq-item {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text2);
+  }
+  .eq-item span { color: var(--purple); }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 0.75rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  /* ── SEIR exposed curve ── */
+  #exposedRow {
+    transition: opacity 0.2s;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .eq-grid { grid-template-columns: 1fr; }
+    header { padding: 1rem; }
+    .main { padding: 1rem; }
+  }
+
+  /* ── ANIMAÇÃO DE ENTRADA ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .metric-card { animation: fadeUp 0.4s ease both; }
+  .metric-card:nth-child(1) { animation-delay: 0.05s; }
+  .metric-card:nth-child(2) { animation-delay: 0.1s; }
+  .metric-card:nth-child(3) { animation-delay: 0.15s; }
+  .metric-card:nth-child(4) { animation-delay: 0.2s; }
+</style>
+</head>
+<body>
+
+<!-- ══ CABEÇALHO ══════════════════════════════════════════════════════ -->
+<header>
+  <h1>Simulador Epidemiológico</h1>
+  <span class="subtitle">Modelos SIR / SEIR — Runge-Kutta 4ª ordem</span>
+  <span class="badge-model" id="modelBadge">SEIR</span>
+</header>
+
+<div class="app">
+
+  <!-- ══ BARRA LATERAL — CONTROLES ══════════════════════════════════ -->
+  <aside class="sidebar">
+
+    <!-- Cenários pré-definidos -->
+    <div>
+      <div class="section-title">Cenários conhecidos</div>
+      <div class="presets-grid">
+        <button class="preset-btn" onclick="applyPreset('sarampao')">
+          <span class="pname">Sarampo</span>
+          <span class="pr0">R₀ ≈ 15</span>
+        </button>
+        <button class="preset-btn" onclick="applyPreset('covid')">
+          <span class="pname">COVID-19</span>
+          <span class="pr0">R₀ ≈ 2.5</span>
+        </button>
+        <button class="preset-btn" onclick="applyPreset('gripe')">
+          <span class="pname">Gripe sazonal</span>
+          <span class="pr0">R₀ ≈ 1.3</span>
+        </button>
+        <button class="preset-btn" onclick="applyPreset('ebola')">
+          <span class="pname">Ebola</span>
+          <span class="pr0">R₀ ≈ 1.8</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Modelo -->
+    <div class="param-group">
+      <div class="section-title" style="margin-bottom:0">Modelo</div>
+      <div class="toggle-row">
+        <label class="toggle">
+          <input type="checkbox" id="seirToggle" checked onchange="toggleSEIR()">
+          <span class="toggle-slider"></span>
+        </label>
+        <span>Incluir compartimento Exposto (SEIR)</span>
+      </div>
+    </div>
+
+    <!-- Parâmetros populacionais -->
+    <div class="param-group">
+      <div class="section-title" style="margin-bottom:0">População</div>
+
+      <div class="param-row">
+        <label>
+          <span class="lname">Tamanho da população (N)</span>
+          <span class="lval" id="lN">100.000</span>
+        </label>
+        <input type="range" id="slN" min="1000" max="1000000" step="1000" value="100000"
+               oninput="updateLabel('lN', this.value, 'int'); runSimulation()">
+      </div>
+
+      <div class="param-row">
+        <label>
+          <span class="lname">Infectados iniciais (I₀)</span>
+          <span class="lval" id="lI0">10</span>
+        </label>
+        <input type="range" id="slI0" min="1" max="1000" step="1" value="10"
+               oninput="updateLabel('lI0', this.value, 'int'); runSimulation()">
+      </div>
+
+      <div class="param-row">
+        <label>
+          <span class="lname">Horizonte temporal (dias)</span>
+          <span class="lval" id="lDays">200 d</span>
+        </label>
+        <input type="range" id="slDays" min="30" max="365" step="5" value="200"
+               oninput="updateLabel('lDays', this.value, 'days'); runSimulation()">
+      </div>
+    </div>
+
+    <!-- Parâmetros epidemiológicos -->
+    <div class="param-group">
+      <div class="section-title" style="margin-bottom:0">Epidemiologia</div>
+
+      <div class="param-row">
+        <label>
+          <span class="lname">Número reprodutivo básico (R₀)</span>
+          <span class="lval" id="lR0">2.50</span>
+        </label>
+        <input type="range" id="slR0" min="0.5" max="20" step="0.1" value="2.5"
+               oninput="updateLabel('lR0', this.value, 'r0'); syncBeta(); runSimulation()">
+      </div>
+
+      <div class="param-row">
+        <label>
+          <span class="lname">Taxa de recuperação (γ)</span>
+          <span class="lval" id="lGamma">0.100 /dia</span>
+        </label>
+        <input type="range" id="slGamma" min="0.01" max="0.5" step="0.001" value="0.1"
+               oninput="updateLabel('lGamma', this.value, 'rate'); syncBeta(); runSimulation()">
+      </div>
+
+      <div class="param-row">
+        <label>
+          <span class="lname">Taxa de transmissão (β)</span>
+          <span class="lval" id="lBeta">0.250 /dia</span>
+        </label>
+        <input type="range" id="slBeta" min="0.01" max="5" step="0.01" value="0.25"
+               oninput="updateLabel('lBeta', this.value, 'rate'); syncR0(); runSimulation()">
+      </div>
+
+      <div class="param-row" id="exposedRow">
+        <label>
+          <span class="lname">Período de incubação (σ⁻¹)</span>
+          <span class="lval" id="lSigma">5.0 dias</span>
+        </label>
+        <input type="range" id="slSigma" min="1" max="30" step="0.5" value="5"
+               oninput="updateLabel('lSigma', this.value, 'sigma'); runSimulation()">
+      </div>
+
+      <div class="param-row">
+        <label>
+          <span class="lname">Fração vacinada (v)</span>
+          <span class="lval" id="lVacc">0%</span>
+        </label>
+        <input type="range" id="slVacc" min="0" max="1" step="0.01" value="0"
+               oninput="updateLabel('lVacc', this.value, 'pct'); runSimulation()">
+      </div>
+    </div>
+
+    <!-- Botões de ação -->
+    <div class="actions">
+      <button class="btn btn-primary" onclick="runSimulation()">▶ Simular</button>
+      <button class="btn btn-secondary" onclick="resetDefaults()">↺ Resetar</button>
+    </div>
+
+  </aside>
+
+  <!-- ══ PAINEL PRINCIPAL ════════════════════════════════════════════ -->
+  <main class="main">
+
+    <!-- Métricas resumidas -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="mlabel">Pico de infecção</div>
+        <div class="mval red" id="mPeakDay">—</div>
+        <div class="msub">dia do surto</div>
+      </div>
+      <div class="metric-card">
+        <div class="mlabel">Máx. infectados</div>
+        <div class="mval red" id="mPeakVal">—</div>
+        <div class="msub">pessoas simultaneamente</div>
+      </div>
+      <div class="metric-card">
+        <div class="mlabel">Total afetado</div>
+        <div class="mval green" id="mTotalR">—</div>
+        <div class="msub">tamanho final da epidemia</div>
+      </div>
+      <div class="metric-card">
+        <div class="mlabel">Imunidade de rebanho</div>
+        <div class="mval amber" id="mHerd">—</div>
+        <div class="msub">limiar = 1 − 1/R₀</div>
+      </div>
+    </div>
+
+    <!-- Gráfico principal -->
+    <div class="chart-card" style="flex:1; min-height: 320px;">
+      <div class="chart-header">
+        <span class="chart-title">Dinâmica epidêmica ao longo do tempo</span>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#58a6ff"></div> Suscetíveis (S)</div>
+          <div class="legend-item" id="legendE"><div class="legend-dot" style="background:#bc8cff"></div> Expostos (E)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#f85149"></div> Infectados (I)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#3fb950"></div> Recuperados (R)</div>
+        </div>
+      </div>
+      <canvas id="epicurve" height="280"></canvas>
+    </div>
+
+    <!-- Equações do modelo -->
+    <div class="equations-card">
+      <div class="eq-title">Equações diferenciais do modelo ativo</div>
+      <div class="eq-grid" id="eqGrid">
+        <!-- preenchido pelo JS -->
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══ RODAPÉ ══════════════════════════════════════════════════════════ -->
+<footer>
+  <span>Simulador Epidemiológico · Integração numérica por Runge-Kutta RK4</span>
+  <span>Gerado por IA — fins educacionais</span>
+</footer>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     JAVASCRIPT — lógica de simulação e renderização
+     ════════════════════════════════════════════════════════════════ -->
+<script>
+// ── ESTADO GLOBAL ──────────────────────────────────────────────────
+let chart = null;          // instância do Chart.js
+let useSEIR = true;        // modelo ativo: SEIR ou SIR
+
+// ── CENÁRIOS PRÉ-DEFINIDOS ─────────────────────────────────────────
+// Cada cenário define os parâmetros epidemiológicos típicos da doença.
+const PRESETS = {
+  sarampao: { N: 100000, I0: 10, days: 200, R0: 15,  gamma: 0.1,   beta: 1.5,   sigma: 10, vacc: 0,    seir: true },
+  covid:    { N: 100000, I0: 10, days: 200, R0: 2.5,  gamma: 0.07,  beta: 0.175, sigma: 5,  vacc: 0,    seir: true },
+  gripe:    { N: 100000, I0: 50, days: 120, R0: 1.3,  gamma: 0.25,  beta: 0.325, sigma: 2,  vacc: 0,    seir: true },
+  ebola:    { N: 100000, I0: 5,  days: 300, R0: 1.8,  gamma: 0.067, beta: 0.12,  sigma: 8,  vacc: 0,    seir: true },
+};
+
+// Aplica um cenário pré-definido aos controles deslizantes.
+function applyPreset(key) {
+  const p = PRESETS[key];
+  document.getElementById('slN').value    = p.N;
+  document.getElementById('slI0').value   = p.I0;
+  document.getElementById('slDays').value = p.days;
+  document.getElementById('slR0').value   = p.R0;
+  document.getElementById('slGamma').value= p.gamma;
+  document.getElementById('slBeta').value = p.beta;
+  document.getElementById('slSigma').value= p.sigma;
+  document.getElementById('slVacc').value = p.vacc;
+  document.getElementById('seirToggle').checked = p.seir;
+  useSEIR = p.seir;
+
+  // Atualiza todos os rótulos
+  updateLabel('lN',     p.N,     'int');
+  updateLabel('lI0',    p.I0,    'int');
+  updateLabel('lDays',  p.days,  'days');
+  updateLabel('lR0',    p.R0,    'r0');
+  updateLabel('lGamma', p.gamma, 'rate');
+  updateLabel('lBeta',  p.beta,  'rate');
+  updateLabel('lSigma', p.sigma, 'sigma');
+  updateLabel('lVacc',  p.vacc,  'pct');
+
+  // Realça o botão ativo
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  toggleSEIRUI();
+  runSimulation();
+}
+
+// ── SINCRONIZAÇÃO β ↔ R₀ ─────────────────────────────────────────
+// β = R₀ · γ   →   R₀ = β / γ
+// Quando o usuário muda R₀, recalcula β; quando muda β, recalcula R₀.
+function syncBeta() {
+  const R0    = parseFloat(document.getElementById('slR0').value);
+  const gamma = parseFloat(document.getElementById('slGamma').value);
+  const beta  = R0 * gamma;
+  document.getElementById('slBeta').value = beta.toFixed(3);
+  updateLabel('lBeta', beta, 'rate');
+}
+function syncR0() {
+  const beta  = parseFloat(document.getElementById('slBeta').value);
+  const gamma = parseFloat(document.getElementById('slGamma').value);
+  const R0    = beta / gamma;
+  document.getElementById('slR0').value = R0.toFixed(2);
+  updateLabel('lR0', R0, 'r0');
+}
+
+// ── FORMATAÇÃO DE RÓTULOS ─────────────────────────────────────────
+function updateLabel(id, val, fmt) {
+  const el = document.getElementById(id);
+  const v  = parseFloat(val);
+  switch(fmt) {
+    case 'int':   el.textContent = Math.round(v).toLocaleString('pt-BR'); break;
+    case 'days':  el.textContent = Math.round(v) + ' d'; break;
+    case 'r0':    el.textContent = v.toFixed(2); break;
+    case 'rate':  el.textContent = v.toFixed(3) + ' /dia'; break;
+    case 'sigma': el.textContent = v.toFixed(1) + ' dias'; break;
+    case 'pct':   el.textContent = Math.round(v * 100) + '%'; break;
+  }
+}
+
+// ── TOGGLE SIR / SEIR ─────────────────────────────────────────────
+function toggleSEIR() {
+  useSEIR = document.getElementById('seirToggle').checked;
+  toggleSEIRUI();
+  runSimulation();
+}
+function toggleSEIRUI() {
+  const show = document.getElementById('seirToggle').checked;
+  document.getElementById('exposedRow').style.opacity = show ? '1' : '0.3';
+  document.getElementById('exposedRow').style.pointerEvents = show ? '' : 'none';
+  document.getElementById('legendE').style.display = show ? '' : 'none';
+  document.getElementById('modelBadge').textContent = show ? 'SEIR' : 'SIR';
+  renderEquations(show);
+}
+
+// ── EQUAÇÕES DO MODELO ───────────────────────────────────────────
+function renderEquations(seir) {
+  const eqs = seir ? [
+    'dS/dt = <span>−β·S·I / N</span>',
+    'dE/dt = <span>β·S·I / N − σ·E</span>',
+    'dI/dt = <span>σ·E − γ·I</span>',
+    'dR/dt = <span>γ·I</span>',
+  ] : [
+    'dS/dt = <span>−β·S·I / N</span>',
+    'dI/dt = <span>β·S·I / N − γ·I</span>',
+    'dR/dt = <span>γ·I</span>',
+  ];
+  document.getElementById('eqGrid').innerHTML =
+    eqs.map(e => `<div class="eq-item">${e}</div>`).join('');
+}
+
+// ── MODELO SEIR — DERIVADAS ───────────────────────────────────────
+// Retorna [dS, dE, dI, dR] para integração numérica.
+function seirDerivatives(S, E, I, R, N, beta, gamma, sigma) {
+  const newExposed   = beta * S * I / N;   // fluxo S → E
+  const newInfected  = sigma * E;           // fluxo E → I
+  const newRecovered = gamma * I;           // fluxo I → R
+  return [
+    -newExposed,
+     newExposed - newInfected,
+     newInfected - newRecovered,
+     newRecovered,
+  ];
+}
+
+// ── MODELO SIR — DERIVADAS ────────────────────────────────────────
+function sirDerivatives(S, I, R, N, beta, gamma) {
+  const newInfected  = beta * S * I / N;
+  const newRecovered = gamma * I;
+  return [
+    -newInfected,
+     newInfected - newRecovered,
+     newRecovered,
+  ];
+}
+
+// ── RUNGE-KUTTA 4ª ORDEM (RK4) ────────────────────────────────────
+// Método numérico de alta precisão para integrar equações diferenciais.
+// A cada passo calcula 4 estimativas (k1..k4) e combina com pesos 1/6·(k1+2k2+2k3+k4).
+function integrateRK4(params) {
+  const { N, I0, days, beta, gamma, sigma, vacc } = params;
+  const dt = 0.5; // passo de integração (meio dia)
+  const steps = Math.round(days / dt);
+
+  // Condições iniciais — vacinados já começam em R
+  const R0_init = Math.round(vacc * N);
+  let S = N - I0 - R0_init;
+  let E = useSEIR ? 0 : 0;   // nenhum exposto no início
+  let I = I0;
+  let R = R0_init;
+
+  // Arrays para armazenar resultados (amostramos 1 ponto/dia)
+  const ts = [], Ss = [], Es = [], Is = [], Rs = [];
+  let t = 0;
+  let nextRecord = 0; // próximo dia a registrar
+
+  for (let step = 0; step <= steps; step++) {
+    // Registra uma vez por dia
+    if (t >= nextRecord - 1e-9) {
+      ts.push(Math.round(t));
+      Ss.push(S); Es.push(E); Is.push(I); Rs.push(R);
+      nextRecord += 1;
+    }
+
+    if (step === steps) break;
+
+    if (useSEIR) {
+      // RK4 para SEIR
+      const k1 = seirDerivatives(S,          E,          I,          R,          N, beta, gamma, sigma);
+      const k2 = seirDerivatives(S+dt/2*k1[0], E+dt/2*k1[1], I+dt/2*k1[2], R+dt/2*k1[3], N, beta, gamma, sigma);
+      const k3 = seirDerivatives(S+dt/2*k2[0], E+dt/2*k2[1], I+dt/2*k2[2], R+dt/2*k2[3], N, beta, gamma, sigma);
+      const k4 = seirDerivatives(S+dt*k3[0],   E+dt*k3[1],   I+dt*k3[2],   R+dt*k3[3],   N, beta, gamma, sigma);
+      S += dt/6*(k1[0]+2*k2[0]+2*k3[0]+k4[0]);
+      E += dt/6*(k1[1]+2*k2[1]+2*k3[1]+k4[1]);
+      I += dt/6*(k1[2]+2*k2[2]+2*k3[2]+k4[2]);
+      R += dt/6*(k1[3]+2*k2[3]+2*k3[3]+k4[3]);
+    } else {
+      // RK4 para SIR
+      const k1 = sirDerivatives(S,          I,          R,          N, beta, gamma);
+      const k2 = sirDerivatives(S+dt/2*k1[0], I+dt/2*k1[1], R+dt/2*k1[2], N, beta, gamma);
+      const k3 = sirDerivatives(S+dt/2*k2[0], I+dt/2*k2[1], R+dt/2*k2[2], N, beta, gamma);
+      const k4 = sirDerivatives(S+dt*k3[0],   I+dt*k3[1],   R+dt*k3[2],   N, beta, gamma);
+      S += dt/6*(k1[0]+2*k2[0]+2*k3[0]+k4[0]);
+      I += dt/6*(k1[1]+2*k2[1]+2*k3[1]+k4[1]);
+      R += dt/6*(k1[2]+2*k2[2]+2*k3[2]+k4[2]);
+    }
+
+    // Garante que os valores não saiam dos limites físicos
+    S = Math.max(0, S); E = Math.max(0, E);
+    I = Math.max(0, I); R = Math.max(0, R);
+    t += dt;
+  }
+
+  return { ts, Ss, Es, Is, Rs };
+}
+
+// ── ATUALIZAR MÉTRICAS ────────────────────────────────────────────
+function updateMetrics(Is, Rs, N, R0, ts) {
+  // Dia e valor do pico de infectados
+  let peakIdx = 0;
+  for (let i = 1; i < Is.length; i++) {
+    if (Is[i] > Is[peakIdx]) peakIdx = i;
+  }
+  const peakDay = ts[peakIdx];
+  const peakVal = Math.round(Is[peakIdx]);
+  const totalR  = Math.round(Rs[Rs.length - 1]);
+  // Limiar de imunidade de rebanho: 1 − 1/R₀
+  const herdPct = R0 > 1 ? ((1 - 1/R0) * 100).toFixed(1) : '—';
+
+  document.getElementById('mPeakDay').textContent = peakDay > 0 ? `Dia ${peakDay}` : '—';
+  document.getElementById('mPeakVal').textContent = peakVal.toLocaleString('pt-BR');
+  document.getElementById('mTotalR').textContent  = totalR.toLocaleString('pt-BR');
+  document.getElementById('mHerd').textContent    = R0 > 1 ? herdPct + '%' : '< R₀=1';
+}
+
+// ── INICIALIZAR / ATUALIZAR GRÁFICO ───────────────────────────────
+function initChart(ts, Ss, Es, Is, Rs) {
+  const ctx = document.getElementById('epicurve').getContext('2d');
+
+  const datasets = [
+    {
+      label: 'Suscetíveis (S)',
+      data: Ss.map((v, i) => ({ x: ts[i], y: Math.round(v) })),
+      borderColor: '#58a6ff',
+      backgroundColor: 'rgba(88,166,255,0.08)',
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: true,
+      tension: 0.3,
+    },
+  ];
+
+  // Adiciona curva de Expostos somente no modelo SEIR
+  if (useSEIR) {
+    datasets.push({
+      label: 'Expostos (E)',
+      data: Es.map((v, i) => ({ x: ts[i], y: Math.round(v) })),
+      borderColor: '#bc8cff',
+      backgroundColor: 'rgba(188,140,255,0.06)',
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: true,
+      tension: 0.3,
+    });
+  }
+
+  datasets.push(
+    {
+      label: 'Infectados (I)',
+      data: Is.map((v, i) => ({ x: ts[i], y: Math.round(v) })),
+      borderColor: '#f85149',
+      backgroundColor: 'rgba(248,81,73,0.1)',
+      borderWidth: 2.5,
+      pointRadius: 0,
+      fill: true,
+      tension: 0.3,
+    },
+    {
+      label: 'Recuperados (R)',
+      data: Rs.map((v, i) => ({ x: ts[i], y: Math.round(v) })),
+      borderColor: '#3fb950',
+      backgroundColor: 'rgba(63,185,80,0.08)',
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: true,
+      tension: 0.3,
+    }
+  );
+
+  const config = {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 400, easing: 'easeInOutQuart' },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#161b22',
+          borderColor: '#30363d',
+          borderWidth: 1,
+          titleColor: '#8b949e',
+          bodyColor: '#e6edf3',
+          callbacks: {
+            title: (items) => `Dia ${items[0].parsed.x}`,
+            label: (item) => `${item.dataset.label}: ${item.parsed.y.toLocaleString('pt-BR')}`,
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          title: { display: true, text: 'Dias', color: '#484f58', font: { size: 11 } },
+          grid: { color: '#21262d' },
+          ticks: { color: '#484f58', maxTicksLimit: 10 },
+        },
+        y: {
+          title: { display: true, text: 'Indivíduos', color: '#484f58', font: { size: 11 } },
+          grid: { color: '#21262d' },
+          ticks: {
+            color: '#484f58',
+            callback: (v) => v >= 1000 ? (v/1000).toFixed(0)+'k' : v,
+          },
+          min: 0,
+        }
+      }
+    }
+  };
+
+  // Destrói gráfico anterior se existir
+  if (chart) { chart.destroy(); }
+  chart = new Chart(ctx, config);
+}
+
+// ── EXECUTAR SIMULAÇÃO ────────────────────────────────────────────
+// Função principal chamada sempre que um parâmetro muda.
+function runSimulation() {
+  // Lê os valores dos controles deslizantes
+  const N     = parseInt(document.getElementById('slN').value);
+  const I0    = parseInt(document.getElementById('slI0').value);
+  const days  = parseInt(document.getElementById('slDays').value);
+  const R0    = parseFloat(document.getElementById('slR0').value);
+  const gamma = parseFloat(document.getElementById('slGamma').value);
+  const beta  = parseFloat(document.getElementById('slBeta').value);
+  const sigma = 1 / parseFloat(document.getElementById('slSigma').value);  // σ = 1/período_incubação
+  const vacc  = parseFloat(document.getElementById('slVacc').value);
+
+  // Integra as equações diferenciais por RK4
+  const { ts, Ss, Es, Is, Rs } = integrateRK4({ N, I0, days, beta, gamma, sigma, vacc });
+
+  // Atualiza gráfico e métricas
+  initChart(ts, Ss, Es, Is, Rs);
+  updateMetrics(Is, Rs, N, R0, ts);
+}
+
+// ── RESETAR PADRÕES ───────────────────────────────────────────────
+function resetDefaults() {
+  document.getElementById('slN').value     = 100000;
+  document.getElementById('slI0').value    = 10;
+  document.getElementById('slDays').value  = 200;
+  document.getElementById('slR0').value    = 2.5;
+  document.getElementById('slGamma').value = 0.1;
+  document.getElementById('slBeta').value  = 0.25;
+  document.getElementById('slSigma').value = 5;
+  document.getElementById('slVacc').value  = 0;
+  document.getElementById('seirToggle').checked = true;
+  useSEIR = true;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  updateLabel('lN',     100000, 'int');
+  updateLabel('lI0',    10,     'int');
+  updateLabel('lDays',  200,    'days');
+  updateLabel('lR0',    2.5,    'r0');
+  updateLabel('lGamma', 0.1,    'rate');
+  updateLabel('lBeta',  0.25,   'rate');
+  updateLabel('lSigma', 5,      'sigma');
+  updateLabel('lVacc',  0,      'pct');
+  toggleSEIRUI();
+  runSimulation();
+}
+
+// ── INICIALIZAÇÃO ─────────────────────────────────────────────────
+// Roda assim que a página carrega.
+toggleSEIRUI();
+runSimulation();
+</script>
+</body>
+</html>
